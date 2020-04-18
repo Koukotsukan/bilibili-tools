@@ -11,16 +11,17 @@ import datetime
 from urllib import parse
 from login import BiliLogin
 
-
 def CurrentTime():
     currenttime = str(int(time.mktime(datetime.datetime.now().timetuple())))
     return currenttime
 
 
 class login():
+    global serverchan
     cookies = ""
-    username = input("输入用户名:")
-    password = input("输入密码:")
+    username = "#你的账号填在引号内"
+    password = "#你的密码填在引号内"
+    serverchan = "#你的serverchan的SCKEY" #ServerChan网站:http://sc.ftqq.com/3.version
     headers = {
         "Host": "api.bilibili.com",
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.139 Safari/537.36",
@@ -80,17 +81,23 @@ class judge(login):
 
     async def query_reward(self):
         url = "https://account.bilibili.com/home/reward"
+        url2 = "https://api.bilibili.com/x/web-interface/nav"
         headers = {
             "Referer": "https://account.bilibili.com/account/home",
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36",
             "Cookie": login.cookies
         }
         response = requests.get(url, headers=headers)
+        level_response = requests.get(url2, headers=headers)
         iflogin = response.json()['data']['login']
         ifwatch_av = response.json()['data']['watch_av']
         ifshare_av = response.json()['data']['share_av']
         ifgive_coin = response.json()['data']['coins_av']
-        return [iflogin, ifwatch_av, ifshare_av, int(ifgive_coin)]
+        current_exp = response.json()['data']["level_info"]['current_exp']
+        next_exp = response.json()['data']["level_info"]['next_exp']
+        current_money = level_response.json()['data']['money']
+        current_level = response.json()['data']["level_info"]['current_level']
+        return [iflogin, ifwatch_av, ifshare_av, int(ifgive_coin), current_exp, next_exp, current_money,current_level]
 
     async def get_attention(self):
         top50_attention_list = []
@@ -140,9 +147,11 @@ class judge(login):
             "Cookie": login.cookies
         }
         response = requests.post(url, data=data, headers=headers)
+        global coinresponse
+        coinresponse = response.json()['code']
         print("coin_task:", response.text)
 
-        if response.json()['code'] != 0:
+        if response.json()['code'] != 0 and response.json()['code'] != -104:
             await self.givecoin()
         await asyncio.sleep(10)
 
@@ -207,49 +216,115 @@ class judge(login):
         print("watch_Av_state:", response.text)
 
     async def coin_run(self):
-        while 1:
+        global coinnum
+        coinnum = 0
+        global coinlog
+        coinlog = " "
+
+        while  coinnum < 5:
             try:
                 i = await self.query_reward()
+                global coin_exp
                 coin_exp = i[3]
+                if coin_exp == 50:
+                    coinnum = 5
+                
                 while coin_exp < 50:
                     await self.givecoin()
+                    if coinresponse == -104:
+                        raise DTError                   
+                    coinnum = coinnum + 1
                     coin_exp = coin_exp + 10
-                if coin_exp == 50:
-                    print("投币任务完成")
-                    await asyncio.sleep(86400)
-                    await self.coin_run()
+                    print ("第",coinnum,"次投币Success")
+                    coinlog = coinlog + "\n\n" + "第" + str(coinnum) + "次投币Success"
             except:
-                print("coin_run出错")
+                coinnum = coinnum + 1
+                print("第",coinnum,"次投币Error")
+                coinlog = coinlog + "\n\n" + "第" + str(coinnum) +"次投币Error"
+        if coinnum == 5:
+            print("投币任务完成")
+            coinlog = "<font color=\"red\">投币任务完成</font>" + "\n\n" + coinlog
+
+
+
 
     async def share_run(self):
-        while 1:
+        global sharenum
+        sharenum = 0
+        global sharelog
+        sharelog = " "
+        while sharenum < 5:
             try:
                 await self.share()
-                print("分享任务完成")
-                await asyncio.sleep(21600)
+                sharenum = sharenum + 1
+                print("第",sharenum,"次分享Success")
+                sharelog = sharelog + "\n\n第" + str(sharenum) + "次分享Success"
+                await asyncio.sleep(2)
             except:
-                print("share_run出错")
+                sharenum = sharenum + 1
+                print("第",sharenum,"次分享Error")
+                sharelog = sharelog + "\n\n第" + str(sharenum) + "次分享Error"
+        if sharenum == 5:
+            print("分享任务完成")
+            sharelog ="<font color=\"red\">分享任务完成</font>" + "\n\n" + sharelog
+
 
     async def watch_run(self):
-        while 1:
+        global watchnum
+        watchnum = 0
+        global watchlog
+        watchlog = " "
+        while watchnum < 5:
             try:
                 video_list = await self.getsubmit_video()
                 aid = video_list[random.randint(0, len(video_list))]
                 cid = await self.get_cid(aid)
                 await self.watch_av(aid, cid)
-                await asyncio.sleep(21600)
+                await asyncio.sleep(3)
+                watchnum = watchnum + 1
+                print ("第",watchnum,"次视频Success")
+                watchlog = watchlog + "\n\n第" + str(watchnum) + "次视频Success"
             except:
-                print("watch_run出错")
+                watchnum = watchnum + 1
+                print("第",watchnum,"次视频Error")
+                watchlog = watchlog + "\n\n第" + str(watchnum) + "次视频Error"
+        if watchnum == 5:
+            print("视频任务完成")
+            watchlog = "<font color=\"red\">视频任务完成</font>" + "\n\n" + watchlog
+            time.sleep (3)
+
+    async def daily_report(self):
+        global day_log
+        day_log = " "
+        value = await self.query_reward()
+        current_money = int(value[6])
+        next_exp = int(value[5])
+        current_exp = int(value[4])
+        coin_exp = int(value[3])
+        current_level = int(value[7]) + 1
+        remain_exp = next_exp - current_exp
+        today_exp = coin_exp + 15
+        remain_coin_days = current_money / 4
+        remain_coin_exp = remain_coin_days * 50
+        remain_15_days = (remain_exp - remain_coin_exp - remain_coin_days * 15) / 25
+        remain_days = remain_coin_days + remain_15_days
+        day_log = "**今日经验: " + str(int(today_exp)) + " Exp**\n\n**硬币投完天数: " + str(round(remain_coin_days)) + "天**\n\n**升级至Lv" + str(int(current_level)) + "天数: " + str(round(remain_days)) + "天**\n\n\n\n"
 
 
-judge().login()
+def main_handler():
+    judge().login()
+    loop = asyncio.get_event_loop()
+    tasks2 = [
+        judge().coin_run(),
+        judge().share_run(),
+        judge().watch_run(),
+        judge().daily_report(),
+    ]
+    loop.run_until_complete(asyncio.wait(tasks2))
+    loop.close()
+    log = day_log +"**投币情况**" + "\n\n" + coinlog + "\n\n" + "**分享情况**" + "\n\n" + sharelog + "\n\n" + "**视频情况**" + "\n\n" + watchlog
+    requests.get("https://sc.ftqq.com/" + serverchan +  ".send?text=哔哩哔哩签到结束&desp=" + log)
+    print (log)
 
-loop = asyncio.get_event_loop()
 
-tasks2 = [
-    judge().coin_run(),
-    judge().share_run(),
-    judge().watch_run(),
-
-]
-loop.run_until_complete(asyncio.wait(tasks2))
+main_handler()
