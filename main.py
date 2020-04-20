@@ -244,6 +244,7 @@ class judge(login):
         if coinnum == 5:
             print("投币任务完成")
             coinlog = "<font color=\"red\">投币任务完成</font>" + "\n\n" + coinlog
+            return[coinnum,]
 
 
 
@@ -292,30 +293,35 @@ class judge(login):
             print("视频任务完成")
             watchlog = "<font color=\"red\">视频任务完成</font>" + "\n\n" + watchlog
             time.sleep (3)
-
+     
     async def daily_report(self):
         global day_log
         day_log = " "
-        value = await self.query_reward()
-        current_money = int(value[6])
-        next_exp = int(value[5])
-        current_exp = int(value[4])
-        coin_exp = int(value[3])
-        current_level = int(value[7]) + 1
-        remain_exp = next_exp - current_exp
-        today_exp = coin_exp + 15
-        remain_coin_days = current_money / 4
-        remain_coin_exp = remain_coin_days * 50
-        remain_15_days = (remain_exp - remain_coin_exp - remain_coin_days * 15) / 25
-        remain_days = remain_coin_days + remain_15_days
-        day_log = "**今日经验: " + str(int(today_exp)) + " Exp**\n\n**硬币投完天数: " + str(round(remain_coin_days)) + "天**\n\n**升级至Lv" + str(int(current_level)) + "天数: " + str(round(remain_days)) + "天**\n\n\n\n"
+        i = await self.coin_run()
+        coinnum = i[0]
+        while coinnum == 5:
+            value = await self.query_reward()
+            current_money = int(value[6])
+            next_exp = int(value[5])
+            current_exp = int(value[4])
+            coin_exp = int(value[3])
+            current_level = int(value[7]) + 1
+            remain_exp = next_exp - current_exp
+            today_exp = coin_exp + 15
+            remain_coin_days = current_money / 4
+            remain_coin_exp = remain_coin_days * 50
+            remain_15_days = (remain_exp - remain_coin_exp - remain_coin_days * 15) / 25
+            remain_days = remain_coin_days + remain_15_days
+            day_log = "**今日经验: " + str(int(today_exp)) + " Exp**\n\n**硬币投完天数: " + str(round(remain_coin_days)) + "天**\n\n**升级至Lv" + str(int(current_level)) + "天数: " + str(round(remain_days)) + "天**\n\n\n\n"
+            print("day_log生成")
+            break;
 
 
 def main_handler():
     judge().login()
     loop = asyncio.get_event_loop()
     tasks2 = [
-        judge().coin_run(),
+        # judge().coin_run(),
         judge().share_run(),
         judge().watch_run(),
         judge().daily_report(),
