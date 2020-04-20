@@ -18,9 +18,11 @@ def CurrentTime():
 
 class login():
     global serverchan
+    global livecoin
     cookies = ""
     username = "#你的账号填在引号内"
     password = "#你的密码填在引号内"
+    livecoin = "0" #是否使用Dawnnnnnn的B站直播助手并开启银瓜子换硬币功能，是填1，不是填0，默认不是
     serverchan = "#你的serverchan的SCKEY" #ServerChan网站:http://sc.ftqq.com/3.version
     headers = {
         "Host": "api.bilibili.com",
@@ -308,9 +310,14 @@ class judge(login):
             current_level = int(value[7]) + 1
             remain_exp = next_exp - current_exp
             today_exp = coin_exp + 15
-            remain_coin_days = current_money / 4
-            remain_coin_exp = remain_coin_days * 50
-            remain_15_days = (remain_exp - remain_coin_exp - remain_coin_days * 15) / 25
+            if livecoin == "1":
+                remain_coin_days = current_money / 3
+                remain_coin_exp = remain_coin_days * 50
+                remain_15_days = (remain_exp - remain_coin_exp - remain_coin_days * 15) / 35
+            else:
+                remain_coin_days = current_money / 4
+                remain_coin_exp = remain_coin_days * 50
+                remain_15_days = (remain_exp - remain_coin_exp - remain_coin_days * 15) / 25
             remain_days = remain_coin_days + remain_15_days
             day_log = "**今日经验: " + str(int(today_exp)) + " Exp**\n\n**硬币投完天数: " + str(round(remain_coin_days)) + "天**\n\n**升级至Lv" + str(int(current_level)) + "天数: " + str(round(remain_days)) + "天**\n\n\n\n"
             print("day_log生成")
